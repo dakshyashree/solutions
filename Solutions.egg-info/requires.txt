@@ -1,0 +1,5 @@
+pdfplumber==0.7.5
+transformers==4.33.2
+torch==2.0.1
+tqdm==4.68.0
+tkintertable==1.3.4
