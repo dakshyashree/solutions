@@ -1,7 +1,8 @@
 from transformers import pipeline
 
+
 def generate_high_quality_questions(
-    summary_text: str, num_questions: int = 3
+        summary_text: str, num_questions: int = 3
 ) -> list:
     """
     Generates high-quality questions based on the summarized text.
@@ -14,11 +15,11 @@ def generate_high_quality_questions(
         list: A list of generated questions.
     """
     question_generator = pipeline("text2text-generation", model="valhalla/t5-base-qa-qg-hl", device=-1)
-    
+
     # Process summary in manageable pieces for better generation
     max_question_length = 300
     chunks = [summary_text[i:i + max_question_length] for i in range(0, len(summary_text), max_question_length)]
-    
+
     questions = []
     for chunk in chunks:
         prompt = f"Generate distinct questions based on the following:\n\n{chunk}\n\n"
@@ -34,5 +35,5 @@ def generate_high_quality_questions(
                 break
         except Exception as e:
             print(f"Error generating questions for chunk: {e}")
-    
+
     return questions[:num_questions] if questions else ["No questions generated."]
