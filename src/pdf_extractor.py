@@ -1,8 +1,12 @@
 import os
 import PyPDF2
 from transformers import pipeline
-from typing import List, Dict
+from typing import List, Dict, Any
+import logging
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class PDFTextProcessor:
     def __init__(self):
@@ -18,14 +22,15 @@ class PDFTextProcessor:
         with open(pdf_path, "rb") as file:
             reader = PyPDF2.PdfReader(file)
             for page in reader.pages:
-                text += page.extract_text() or ""
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text
         return text.strip()
 
     def summarize_text(self, text: str, max_length: int = 130, min_length: int = 30) -> str:
         """Generate a summary of the provided text."""
         if not text:
             raise ValueError("Cannot summarize empty text.")
-
         summary = self.summarizer(text, max_length=max_length, min_length=min_length, do_sample=False)
         return summary[0]['summary_text']
 
@@ -33,54 +38,43 @@ class PDFTextProcessor:
         """Generate questions based on the provided text."""
         if not text:
             raise ValueError("Cannot generate questions from empty text.")
+        return self.question_generator(text)
 
-        questions = self.question_generator(text)
-        return questions
+    def extract_topic_text(self, text: str, topic: str) -> str:
+        """Extract text related to a specific topic."""
+        topic_lower = topic.lower()
+        lines = text.splitlines()
+        extracted_lines = [line for line in lines if topic_lower in line.lower()]
+        return "\n".join(extracted_lines).strip()
 
-    def process_pdf(self, pdf_path: str, topics: List[str]) -> Dict[str, Dict[str, List[str]]]:
+    def process_pdf(self, pdf_path: str, topics: List[str]) -> Dict[str, Dict[str, Any]]:
         """Process the PDF to extract summaries and questions for each topic."""
+        logger.info(f"Processing PDF: {pdf_path}")
         extracted_text = self.extract_text_from_pdf(pdf_path)
 
+        logger.info("Generating general summary...")
         results = {
             "general_summary": self.summarize_text(extracted_text),
             "topic_summaries": {}
         }
 
         for topic in topics:
-            topic_text = self.extract_topic_text(extracted_text, topic)  # Implement this method
+            logger.info(f"Processing topic: {topic}")
+            topic_text = self.extract_topic_text(extracted_text, topic)
             if topic_text:
-                topic_summary = self.summarize_text(topic_text)
-                questions = self.generate_questions(topic_summary)
-                results["topic_summaries"][topic] = {
-                    "summary": topic_summary,
-                    "questions": questions
-                }
+                try:
+                    topic_summary = self.summarize_text(topic_text)
+                    questions = self.generate_questions(topic_summary)
+                    results["topic_summaries"][topic] = {
+                        "summary": topic_summary,
+                        "questions": questions
+                    }
+                except ValueError as e:
+                    logger.warning(f"Could not process topic '{topic}': {e}")
+                    results["topic_summaries"][topic] = {
+                        "summary": "",
+                        "questions": []
+                    }
 
+        logger.info("PDF processing completed.")
         return results
-
-    def extract_topic_text(self, text: str, topic: str) -> str:
-        """Extract text related to a specific topic. This is a placeholder for actual implementation."""
-        # Implement logic to extract text for the given topic
-        # For example, you could use keyword matching or NLP techniques to find relevant sections
-        return text  # Placeholder: return the entire text for now
-
-
-if __name__ == "__main__":
-    pdf_path = "your_pdf_file.pdf"  # Specify your PDF file path
-    topics = ["Topic 1", "Topic 2"]  # Replace with actual topics
-
-    processor = PDFTextProcessor()
-    try:
-        results = processor.process_pdf(pdf_path, topics)
-
-        print("General Summary:")
-        print(results["general_summary"])
-
-        for topic, data in results["topic_summaries"].items():
-            print(f"\nSummary for {topic}:")
-            print(data["summary"])
-            print(f"Questions for {topic}:")
-            for question in data["questions"]:
-                print(question['question'])
-    except Exception as e:
-        print(f"An error occurred: {e}")
