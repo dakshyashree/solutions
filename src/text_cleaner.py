@@ -2,7 +2,6 @@ import re
 import string
 from typing import List
 
-
 class TextCleaner:
     def __init__(self):
         """Initialize the TextCleaner."""
