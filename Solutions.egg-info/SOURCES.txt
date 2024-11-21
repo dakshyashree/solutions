@@ -1,0 +1,14 @@
+README.md
+setup.py
+Solutions.egg-info/PKG-INFO
+Solutions.egg-info/SOURCES.txt
+Solutions.egg-info/dependency_links.txt
+Solutions.egg-info/entry_points.txt
+Solutions.egg-info/requires.txt
+Solutions.egg-info/top_level.txt
+app/__init__.py
+app/question_generation.py
+app/summarization.py
+app/text_extraction.py
+app/utils.py
+ui/__init__.py
