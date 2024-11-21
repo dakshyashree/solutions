@@ -2,6 +2,7 @@ import streamlit as st
 import pdfplumber
 from transformers import pipeline
 import re
+import time
 
 
 # Step 1: Extract text from PDF
@@ -41,56 +42,19 @@ def clean_text(text):
     return text.strip()
 
 
-# Enhanced question generation function
-# Enhanced question generation function
+# Function to generate questions from the summary
 def generate_questions(summary):
-    question_generator = pipeline("text2text-generation", model="t5-base")
+    question_generator = pipeline("text2text-generation", model="t5-small")
     questions = []
-
-    # Split the summary into sentences
-    sentences = re.split(r'(?<=\w[.!?])\s', summary)  # Split sentences accurately
-
-    for sentence in sentences:
-        sentence = sentence.strip()
-        if not sentence:
-            continue  # Skip empty sentences
-
-        generated_questions = []
-
-        # Define specific prompts to ensure meaningful questions
-        prompts = [
-            f"Turn this statement into a question: {sentence}",
-            f"Ask a 'why' question about: {sentence}",
-            f"Ask a 'how' question about: {sentence}",
-            f"Create a question based on: {sentence}"
-        ]
-
-        # Try generating questions for each prompt
-        for prompt in prompts:
+    for sentence in summary.split('.'):
+        if sentence.strip():  # Avoid empty strings
+            prompt = f"generate question: {sentence.strip()}"
             try:
-                question = question_generator(prompt, max_length=50, num_beams=5, early_stopping=True)[0]['generated_text']
-                # Validate and add unique questions
-                if question and question not in generated_questions:
-                    generated_questions.append(question.strip())
-            except Exception:
-                continue  # Skip errors during generation
-
-        # Use fallback questions if nothing valid is generated
-        if not generated_questions:
-            fallback_questions = [
-                f"What is the main idea of: '{sentence}'?",
-                f"Why might this be important: '{sentence}'?",
-                f"How does this relate to the context?"
-            ]
-            generated_questions.extend(fallback_questions)
-
-        # Append unique questions to the final list
-        for question in generated_questions:
-            if question not in questions:
+                question = question_generator(prompt)[0]['generated_text']
                 questions.append(question)
-
+            except Exception as e:
+                st.warning(f"Error generating question for sentence: {sentence[:50]}")
     return questions
-
 
 
 # Streamlit UI
@@ -149,9 +113,8 @@ if uploaded_file is not None:
                 st.subheader("Questions based on the summary:")
                 questions = generate_questions(summary)
                 if questions:
-                    with st.expander("View all generated questions"):
-                        for i, question in enumerate(questions, 1):
-                            st.markdown(f"**{i}. {question}**")
+                    for i, question in enumerate(questions, 1):
+                        st.write(f"{i}. {question}")
                 else:
                     st.write("No questions could be generated. Please ensure the summary contains enough detail.")
 
